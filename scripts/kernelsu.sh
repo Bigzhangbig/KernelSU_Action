@@ -168,6 +168,45 @@ ksu_install() {
 	fi
 	ok "${name} installed at ${head_desc} (${head_sha})"
 
+	# --- fix SukiSU-Ultra builtin SUSFS Priority UID Filter mismatch --------
+	if [ "$variant" = "sukisu-ultra" ]; then
+		python3 -c "
+import os, re
+ksu_dir = '${ksu_dir}'
+
+# 1. Kconfig: declare CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER so kconfig retains it
+kconfig_path = os.path.join(ksu_dir, 'kernel', 'Kconfig')
+if os.path.exists(kconfig_path):
+    c = open(kconfig_path).read()
+    if 'KSU_SUSFS_PRIORITY_UID_FILTER' not in c:
+        c = c.replace('endmenu\n\nendmenu', 'config KSU_SUSFS_PRIORITY_UID_FILTER\n\tbool \"Enable priority uid filter for susfs\"\n\tdepends on KSU_SUSFS\n\tdefault y\n\nendmenu\n\nendmenu')
+        open(kconfig_path, 'w').write(c)
+
+# 2. pkg_observer.c: wrap naked susfs_parse_priority_app_strings() in #ifdef
+pkg_path = os.path.join(ksu_dir, 'kernel', 'manager', 'pkg_observer.c')
+if os.path.exists(pkg_path):
+    c = open(pkg_path).read()
+    c = re.sub(
+        r'(\n[ \t]*)susfs_parse_priority_app_strings\(\);',
+        r'\1#if defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER)\1susfs_parse_priority_app_strings();\1#endif',
+        c
+    )
+    open(pkg_path, 'w').write(c)
+
+# 3. dispatch.c: wrap CMD_SUSFS_SET_PRIORITY_UID_FILTER in #ifdef
+disp_path = os.path.join(ksu_dir, 'kernel', 'supercall', 'dispatch.c')
+if os.path.exists(disp_path):
+    c = open(disp_path).read()
+    c = re.sub(
+        r'(\n[ \t]*)case CMD_SUSFS_SET_PRIORITY_UID_FILTER:\s*\n[ \t]*susfs_set_priority_uid_filter\(arg\);\s*\n[ \t]*return 0;',
+        r'\1#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER\1case CMD_SUSFS_SET_PRIORITY_UID_FILTER:\1    susfs_set_priority_uid_filter(arg);\1    return 0;\1#endif',
+        c
+    )
+    open(disp_path, 'w').write(c)
+" 2>/dev/null || true
+		info "normalized SukiSU-Ultra builtin SUSFS Priority UID Filter guards"
+	fi
+
 	# --- publish facts the later steps need --------------------------------
 	local count version_label
 	count=$(git -C "$ksu_dir" rev-list --count HEAD 2>/dev/null || echo 0)
