@@ -80,6 +80,11 @@ susfs_apply() {
 	[ -n "$kernel_patch" ] && [ -f "$kernel_patch" ] \
 		|| die "no 50_add_susfs_in_*.patch found in ${kp}"
 
+	# Fix upstream vendor-header mismatch in 50_add_susfs_in_gki-android14-6.1.patch
+	# AOSP kernel_common does not carry <trace/hooks/blk.h> in fs/namespace.c
+	sed -i 's/@@ -32,11 +32,21 @@/@@ -32,10 +32,20 @@/' "$kernel_patch" 2>/dev/null || true
+	sed -i '/#include <trace\/hooks\/blk\.h>/d' "$kernel_patch" 2>/dev/null || true
+
 	( cd "$KERNEL_DIR" && apply_patch "$kernel_patch" 1 ) \
 		|| die "the SUSFS kernel patch did not apply cleanly.
        This usually means SUSFS_BRANCH does not match your kernel. Detected
