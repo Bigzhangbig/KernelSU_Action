@@ -137,6 +137,17 @@ build_kernel() {
 	fi
 
 	cd "$KERNEL_DIR"
+
+	# Fix host tools (e.g. resolve_btfids/libbpf) build issues with newer host compilers/headers
+	if [ -d "${KERNEL_DIR}/tools" ]; then
+		info "sanitizing tools/ makefiles and sources for modern toolchains"
+		find "${KERNEL_DIR}/tools" \( -name "Makefile*" -o -name "*.mk" \) -exec sed -i 's/-Werror//g' {} + 2>/dev/null || true
+		if [ -f "${KERNEL_DIR}/tools/lib/bpf/libbpf.c" ]; then
+			sed -i -E 's/^([[:space:]]*)char[[:space:]]+\*res;/\1const char *res;/g' "${KERNEL_DIR}/tools/lib/bpf/libbpf.c"
+			sed -i -E 's/^([[:space:]]*)char[[:space:]]+\*next_path;/\1const char *next_path;/g' "${KERNEL_DIR}/tools/lib/bpf/libbpf.c"
+		fi
+	fi
+
 	info "make ${args} ${KERNEL_CONFIG}"
 	# shellcheck disable=SC2086
 	make -j"$(nproc --all)" CC=clang $args "${KERNEL_CONFIG}" \
