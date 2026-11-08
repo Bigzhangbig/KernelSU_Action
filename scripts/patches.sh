@@ -71,6 +71,11 @@ susfs_apply() {
 	cp -v "${kp}/fs/"*.c              "${KERNEL_DIR}/fs/"            2>/dev/null || true
 	cp -v "${kp}/include/linux/"*.h   "${KERNEL_DIR}/include/linux/" 2>/dev/null || true
 
+	# Provide fallback stubs in susfs.h if CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER is not enabled
+	if [ -f "${KERNEL_DIR}/include/linux/susfs.h" ]; then
+		sed -i 's/#endif \/\/ #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER/#else\nstatic inline void susfs_set_priority_uid_filter(void __user **user_info) {}\nstatic inline void susfs_parse_priority_app_strings(void) {}\n#endif \/\/ #ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER/' "${KERNEL_DIR}/include/linux/susfs.h" 2>/dev/null || true
+	fi
+
 	# 2. Patch the kernel itself.
 	local kernel_patch="${kp}/50_add_susfs_in_${branch}.patch"
 	[ -f "$kernel_patch" ] || {

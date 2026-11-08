@@ -187,6 +187,18 @@ ksu_install() {
 
 	ksu_resolve_hook_mode "${KSU_HOOK_MODE:-auto}" "$kver"
 
+	# Fix SukiSU-Ultra missing ifdefs and Kconfig for newly synced SUSFS 2.4.0 priority_uid_filter
+	if [ -f "${ksu_dir}/kernel/Kconfig" ] && ! grep -q "KSU_SUSFS_PRIORITY_UID_FILTER" "${ksu_dir}/kernel/Kconfig"; then
+		printf '\nconfig KSU_SUSFS_PRIORITY_UID_FILTER\n\tbool "Enable priority uid filter"\n\tdepends on KSU_SUSFS\n\tdefault y\n' >> "${ksu_dir}/kernel/Kconfig"
+		info "added missing KSU_SUSFS_PRIORITY_UID_FILTER to ${ksu_dir}/kernel/Kconfig"
+	fi
+	if [ -f "${ksu_dir}/kernel/manager/pkg_observer.c" ]; then
+		sed -i 's/^[[:space:]]*susfs_parse_priority_app_strings();/#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER\n    susfs_parse_priority_app_strings();\n#endif/' "${ksu_dir}/kernel/manager/pkg_observer.c" 2>/dev/null || true
+	fi
+	if [ -f "${ksu_dir}/kernel/supercall/dispatch.c" ]; then
+		sed -i 's/case CMD_SUSFS_SET_PRIORITY_UID_FILTER:/#ifdef CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER\n        case CMD_SUSFS_SET_PRIORITY_UID_FILTER:/; s/susfs_set_priority_uid_filter(arg);[[:space:]]*return 0;/susfs_set_priority_uid_filter(arg);\n            return 0;\n#endif/' "${ksu_dir}/kernel/supercall/dispatch.c" 2>/dev/null || true
+	fi
+
 	summary "| KernelSU variant | \`${name}\` |"
 	summary "| KernelSU ref | \`${ref:-latest tag}\` -> \`${version_label}\` |"
 
