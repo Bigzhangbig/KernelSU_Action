@@ -237,7 +237,9 @@ ksu_hook_configs() {
 		kconf_enable "$defconfig" CONFIG_HAVE_KPROBES
 		kconf_enable "$defconfig" CONFIG_KPROBE_EVENTS
 		kconf_enable "$defconfig" CONFIG_KRETPROBES
-		[ "$variant" = "kernelsu-next" ] && kconf_enable "$defconfig" CONFIG_KSU_KPROBES_HOOK
+		if [ "$variant" = "kernelsu-next" ]; then
+			kconf_enable "$defconfig" CONFIG_KSU_KPROBES_HOOK
+		fi
 		;;
 	manual)
 		case "$variant" in
@@ -255,14 +257,16 @@ ksu_hook_configs() {
 		esac
 		;;
 	tracepoint)
-		[ "$variant" = "resukisu" ] || [ "$variant" = "sukisu-ultra" ] \
-			|| warn "hook mode 'tracepoint' is only declared by ReSukiSU/SukiSU-Ultra; ignoring for ${variant}"
+		if [ "$variant" != "resukisu" ] && [ "$variant" != "sukisu-ultra" ]; then
+			warn "hook mode 'tracepoint' is only declared by ReSukiSU/SukiSU-Ultra; ignoring for ${variant}"
+		fi
 		kconf_enable "$defconfig" CONFIG_KSU_TRACEPOINT_HOOK
 		;;
 	syscall)
 		kconf_enable "$defconfig" CONFIG_KSU_SYSCALL_HOOK
 		;;
 	esac
+	return 0
 }
 
 # Only run the installer when sourced as a script entry point.

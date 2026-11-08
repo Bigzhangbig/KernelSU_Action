@@ -45,7 +45,9 @@ prepare_defconfig() {
 	fi
 
 	# Overlayfs backs KernelSU's module mounts and system-partition writes.
-	is_true "${ADD_OVERLAYFS_CONFIG:-false}" && kconf_enable "$DEFCONFIG_PATH" CONFIG_OVERLAY_FS
+	if is_true "${ADD_OVERLAYFS_CONFIG:-false}"; then
+		kconf_enable "$DEFCONFIG_PATH" CONFIG_OVERLAY_FS
+	fi
 
 	# Kept as a standalone switch for kernels that need kprobes for their own
 	# reasons, independent of the hook mode.
@@ -60,7 +62,9 @@ prepare_defconfig() {
 			CONFIG_LTO_CLANG_THIN=n CONFIG_THINLTO=n CONFIG_LTO_NONE=y
 	fi
 
-	is_true "${DISABLE_CC_WERROR:-false}" && kconf_disable "$DEFCONFIG_PATH" CONFIG_CC_WERROR
+	if is_true "${DISABLE_CC_WERROR:-false}"; then
+		kconf_disable "$DEFCONFIG_PATH" CONFIG_CC_WERROR
+	fi
 
 	# Free-form extras: one CONFIG_x=y per line, or space separated.
 	if [ -n "${EXTRA_DEFCONFIG:-}" ]; then
@@ -87,6 +91,7 @@ prepare_defconfig() {
 	info "defconfig changes:"
 	diff -u "${WORKSPACE}/defconfig.orig" "$DEFCONFIG_PATH" | sed -n '4,$p' | sed 's/^/    /' || true
 	endgroup
+	return 0
 }
 
 # ----------------------------------------------------------------- build ---
