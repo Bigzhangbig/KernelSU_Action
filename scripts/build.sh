@@ -66,6 +66,11 @@ prepare_defconfig() {
 		kconf_disable "$DEFCONFIG_PATH" CONFIG_CC_WERROR
 	fi
 
+	if ! command -v pahole >/dev/null 2>&1; then
+		warn "pahole not found; disabling CONFIG_DEBUG_INFO_BTF"
+		kconf_disable "$DEFCONFIG_PATH" CONFIG_DEBUG_INFO_BTF
+	fi
+
 	# Free-form extras: one CONFIG_x=y per line, or space separated.
 	if [ -n "${EXTRA_DEFCONFIG:-}" ]; then
 		local kv

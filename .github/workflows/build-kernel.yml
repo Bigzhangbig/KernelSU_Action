@@ -163,7 +163,7 @@ jobs:
           # Kept deliberately lean. Avoid re-installing git, curl, python3, zstd, zip
           # which are pre-installed on the runner image.
           sudo apt-get install -y --no-install-recommends \
-            bc bison build-essential ccache cpio device-tree-compiler flex \
+            bc bison build-essential ccache cpio device-tree-compiler dwarves flex \
             libelf-dev libssl-dev lz4 libncurses-dev
           mkdir -p "$WORKSPACE"
 
